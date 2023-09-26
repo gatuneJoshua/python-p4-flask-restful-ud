@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
-from flask import Flask, request, make_response
+from datetime import datetime
+from flask import Flask, request, make_response,jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
@@ -79,8 +79,49 @@ class NewsletterByID(Resource):
         )
 
         return response
+    
+    def patch(self, id):
+        record = Newsletter.query.get_or_404(id)
 
+        # Update the fields based on the JSON data from the request
+        data = request.get_json()
+        if data:
+            for key, value in data.items():
+                if key != 'id': #Update other attributes other than ID
+                    setattr(record, key, value)
+
+        # Automatically update the 'edited_at' field
+        record.edited_at = datetime.utcnow()
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        response_dict = record.to_dict()
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+        return response
+    
+    
+    def delete(self, id):
+
+        record = Newsletter.query.filter_by(id=id).first()
+
+        db.session.delete(record)
+        db.session.commit()
+
+        response_dict = {"message": "record successfully deleted"}
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+
+        return response
 api.add_resource(NewsletterByID, '/newsletters/<int:id>')
+    
 
 
 if __name__ == '__main__':
